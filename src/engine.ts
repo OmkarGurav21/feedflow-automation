@@ -105,6 +105,9 @@ export async function runAutomationCycle(userId: string): Promise<AutomationResu
     });
 
     const page: Page = await context.newPage();
+    page.on("console", msg => {
+      console.log("PAGE:", msg.text());
+    });
 
     try {
       await loginToInstagram(page, instagramAccount.instagram_username, instagramAccount.instagram_password);
@@ -184,55 +187,50 @@ export async function runAutomationCycle(userId: string): Promise<AutomationResu
   return result;
 }
 
-async function loginToInstagram(page: Page, username: string, password: string): Promise<void> {
+async function loginToInstagram(
+  page: Page,
+  username: string,
+  password: string
+): Promise<void> {
   console.log("  Navigating to Instagram login...");
-  await page.goto("https://www.instagram.com/accounts/login/", {
-    waitUntil: "commit",
-    timeout: 30000,
-  });
-  await page.waitForTimeout(3000);
 
-  await page.waitForSelector('input[type="text"]', { timeout: 15000 });
-  await page.fill('input[type="text"]', username);
-  await page.fill('input[type="password"]', password);
-
-  const loginBtn = page.locator('div[role="button"]:has-text("Log in")').first();
-  if (await loginBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-    await loginBtn.click();
-  } else {
-    await page.locator('button[type="submit"]').first().click();
-  }
-
-  await page.waitForFunction(
-    () => !window.location.href.includes("/login/"),
-    { timeout: 20000 }
-  );
-  await page.waitForTimeout(2000);
-
-  const dismissPhrases = [/not now/i, /save info/i, /skip/i, /later/i];
-  for (const phrase of dismissPhrases) {
-    try {
-      const btn = page.locator("button", { hasText: phrase }).first();
-      if (await btn.isVisible({ timeout: 1500 }).catch(() => false)) {
-        await btn.click();
-        await page.waitForTimeout(2000);
-      }
-    } catch { }
-  }
-  try {
-    const el = page
-      .locator('div[role="button"]:has-text("Not Now"), a:has-text("Not Now"), span:has-text("Not Now")')
-      .first();
-    if (await el.isVisible({ timeout: 1500 }).catch(() => false)) {
-      await el.click();
-      await page.waitForTimeout(2000);
+  await page.goto(
+    "https://www.instagram.com/accounts/login/",
+    {
+      waitUntil: "domcontentloaded",
+      timeout: 60000,
     }
-  } catch { }
-
-  await page.waitForFunction(
-    () => !window.location.href.includes("/accounts/"),
-    { timeout: 20000 }
   );
+
+  await page.waitForTimeout(8000);
+
+  console.log("  Current URL:", page.url());
+
+  await page.screenshot({
+    path: "instagram-login-page.png",
+    fullPage: true,
+  });
+
+  await page.waitForSelector(
+    'input[name="username"]',
+    { timeout: 30000 }
+  );
+
+  await page.fill(
+    'input[name="username"]',
+    username
+  );
+
+  await page.fill(
+    'input[name="password"]',
+    password
+  );
+
+  await page.locator('button[type="submit"]').click();
+
+  await page.waitForTimeout(10000);
+
+  console.log("  Login URL:", page.url());
 
   console.log("  Login successful.");
 }
