@@ -211,10 +211,19 @@ async function loginToInstagram(
     fullPage: true,
   });
 
-  await page.waitForSelector(
-    'input[name="username"]',
-    { timeout: 30000 }
+  const usernameInput =
+  page.locator('input[name="username"]');
+
+console.log(
+  "Username fields found:",
+  await usernameInput.count()
+);
+
+if ((await usernameInput.count()) === 0) {
+  throw new Error(
+    "Instagram login form not detected"
   );
+}
 
   await page.fill(
     'input[name="username"]',
